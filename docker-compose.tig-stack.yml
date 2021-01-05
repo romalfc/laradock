@@ -1,0 +1,40 @@
+version: '3.5'
+
+services:
+  influxdb:
+    image: influxdb:latest
+    ports:
+      - "${INFLUXDB_PORT_1}:8083"
+      - "${INFLUXDB_PORT_2}:8086"
+      - "${INFLUXDB_PORT_3}:8090"
+    expose:
+      - ${INFLUXDB_PORT_1}
+      - ${INFLUXDB_PORT_2}
+      - ${INFLUXDB_PORT_3}
+    volumes:
+      - ${DATA_PATH_HOST}/influxdb/data:/var/lib/influxdb
+
+  telegraf:
+    image: telegraf:latest
+    links:
+      - influxdb
+    volumes:
+      - ./tig-stack/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${NGINX_HOST_LOG_PATH}:/var/log/nginx
+
+  grafana:
+    build:
+      context: ./grafana
+    user: "472"
+    volumes:
+      - ./grafana/data/dashboards/:/var/lib/grafana/dashboards/
+      - ./grafana/data/provisioning/dashboards/:/etc/grafana/provisioning/dashboards/
+      - ./grafana/data/provisioning/datasources/:/etc/grafana/provisioning/datasources/
+    environment:
+        - GF_INSTALL_PLUGINS=${GF_INSTALL_PLUGINS}
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    links:
+      - influxdb
+    networks:
+      - backend
